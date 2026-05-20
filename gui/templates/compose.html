@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAP v1.2 Message Tool</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    header {
+      background: #1a1d27;
+      border-bottom: 1px solid #2d3148;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; color: #f8fafc; }
+    header .subtitle { font-size: 0.8rem; color: #94a3b8; }
+
+    nav {
+      display: flex;
+      gap: 0;
+      margin-left: auto;
+    }
+    nav a {
+      display: inline-block;
+      padding: 0.45rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #94a3b8;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    nav a:hover, nav a.active { background: #2d3148; color: #f8fafc; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* ── Cards ── */
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 1.1rem;
+    }
+
+    /* ── Form ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .form-grid.full { grid-template-columns: 1fr; }
+
+    .field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .field label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .field label .req { color: #f87171; margin-left: 2px; }
+
+    input[type="text"],
+    input[type="datetime-local"],
+    input[type="number"],
+    select,
+    textarea {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.88rem;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #4f6ef7;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: #1a1d27; }
+
+    .conditional { display: none; }
+    .conditional.visible { display: contents; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #4f6ef7; color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: #2d3148; color: #e2e8f0; }
+    .btn-secondary:hover { background: #3a3f5c; }
+    .btn-copy { background: #1e293b; color: #94a3b8; font-size: 0.8rem; padding: 0.35rem 0.8rem; }
+    .btn-copy:hover { background: #2d3148; color: #e2e8f0; }
+
+    .btn-row { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+
+    /* ── Errors ── */
+    .error-box {
+      background: #2d1515;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .error-box .error-title { font-weight: 700; color: #fca5a5; margin-bottom: 0.5rem; }
+    .error-box ul { padding-left: 1.25rem; }
+    .error-box li { color: #fca5a5; font-size: 0.88rem; margin-bottom: 0.25rem; }
+
+    /* ── Validation summary ── */
+    .val-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+    }
+    .val-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 7px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.82rem;
+    }
+    .val-check .icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .val-check.pass { border-color: #166534; }
+    .val-check.pass .icon { color: #4ade80; }
+    .val-check.fail { border-color: #7f1d1d; }
+    .val-check.fail .icon { color: #f87171; }
+    .val-check .label { font-weight: 600; color: #e2e8f0; }
+    .val-check .detail { color: #f87171; font-size: 0.75rem; margin-top: 0.2rem; }
+
+    /* ── XML output ── */
+    .xml-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .xml-pre {
+      background: #0a0c12;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      color: #a5f3fc;
+      max-height: 500px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+    .ext-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      color: #818cf8;
+      text-decoration: none;
+    }
+    .ext-link:hover { text-decoration: underline; }
+
+    /* ── Parse result ── */
+    .parse-section { margin-bottom: 1.25rem; }
+    .parse-section h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #2d3148;
+    }
+    .kv-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .kv-table tr:not(:last-child) td { border-bottom: 1px solid #1e2235; }
+    .kv-table td { padding: 0.45rem 0.5rem; vertical-align: top; }
+    .kv-table td:first-child {
+      color: #64748b;
+      font-weight: 600;
+      white-space: nowrap;
+      width: 30%;
+      padding-right: 1rem;
+    }
+    .kv-table td:last-child { color: #e2e8f0; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-extreme  { background: #7f1d1d; color: #fca5a5; }
+    .badge-severe   { background: #7c2d12; color: #fdba74; }
+    .badge-moderate { background: #713f12; color: #fde68a; }
+    .badge-minor    { background: #14532d; color: #86efac; }
+    .badge-unknown  { background: #1e293b; color: #94a3b8; }
+    .badge-actual   { background: #14532d; color: #86efac; }
+    .badge-test     { background: #1e293b; color: #94a3b8; }
+    .badge-exercise { background: #1e3a5f; color: #93c5fd; }
+    .badge-system   { background: #2d1b69; color: #c4b5fd; }
+    .badge-draft    { background: #292524; color: #a8a29e; }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid #2d3148;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: 0.6rem 1.4rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #64748b;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn.active { color: #818cf8; border-bottom-color: #818cf8; }
+    .tab-btn:hover:not(.active) { color: #e2e8f0; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; }
+      .val-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>CAP v1.2 Message Tool</h1>
+    <div class="subtitle">Common Alerting Protocol — OASIS Standard</div>
+  </div>
+  <nav>
+    <a href="/" class="{% if mode == 'compose' %}active{% endif %}">Compose</a>
+    <a href="#parse-tab" onclick="switchTab('parse')" class="{% if mode == 'parse' %}active{% endif %}">Parse / Interpret</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- ── Errors ── -->
+  {% if errors %}
+  <div class="error-box">
+    <div class="error-title">⚠ Validation Errors</div>
+    <ul>
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- ── Tabs ── -->
+  <div class="tab-bar">
+    <button class="tab-btn {% if mode != 'parse' %}active{% endif %}" onclick="switchTab('compose')">Compose</button>
+    <button class="tab-btn {% if mode == 'parse' %}active{% endif %}" onclick="switchTab('parse')">Parse / Interpret</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       COMPOSE TAB
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-compose" class="tab-panel {% if mode != 'parse' %}active{% endif %}">
+    <form method="POST" action="/compose">
+
+      <!-- Alert Section -->
+      <div class="card">
+        <div class="card-title">Alert — Message Level</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Identifier <span style="color:#64748b;font-weight:400">(auto-generated if blank)</span></label>
+            <input type="text" name="identifier" value="{{ form_data.get('identifier','') }}" placeholder="Leave blank for UUID">
+          </div>
+          <div class="field">
+            <label>Sender <span class="req">*</span></label>
+            <input type="text" name="sender" value="{{ form_data.get('sender','') }}" placeholder="alerts@agency.gov" required>
+          </div>
+          <div class="field">
+            <label>Sent (UTC)</label>
+            <input type="datetime-local" name="sent" value="{{ form_data.get('sent','') }}">
+          </div>
+          <div class="field">
+            <label>Status <span class="req">*</span></label>
+            <select name="status">
+              {% for s in statuses %}
+              <option value="{{ s.value }}" {% if form_data.get('status', 'Test') == s.value %}selected{% endif %}>{{ s.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Message Type <span class="req">*</span></label>
+            <select name="msg_type" id="msg_type_sel" onchange="toggleConditional()">
+              {% for m in msg_types %}
+              <option value="{{ m.value }}" {% if form_data.get('msg_type', 'Alert') == m.value %}selected{% endif %}>{{ m.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Scope <span class="req">*</span></label>
+            <select name="scope" id="scope_sel" onchange="toggleConditional()">
+              {% for sc in scopes %}
+              <option value="{{ sc.value }}" {% if form_data.get('scope', 'Public') == sc.value %}selected{% endif %}>{{ sc.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Conditional: Restriction (Restricted scope) -->
+        <div class="form-grid" style="margin-top:1rem">
+          <div class="field conditional" id="field_restriction">
+            <label>Restriction <span class="req">*</span></label>
+            <input type="text" name="restriction" value="{{ form_data.get('restriction','') }}" placeholder="Restriction statement">
+          </div>
+          <!-- Conditional: Addresses (Private scope) -->
+          <div class="field conditional" id="field_addresses">
+            <label>Addresses <span class="req">*</span></label>
+            <input type="text" name="addresses" value="{{ form_data.get('addresses','') }}" placeholder="Recipient addresses">
+          </div>
+          <!-- Conditional: References (Update/Cancel/Ack) -->
+          <div class="field conditional" id="field_references" style="grid-column: 1 / -1">
+            <label>References <span class="req">*</span></label>
+            <input type="text" name="references" value="{{ form_data.get('references','') }}"
+              placeholder="sender,identifier,sent (space-separated for multiple)">
+          </div>
+        </div>
+
+        <div class="form-grid" style="margin-top:1rem">
+          <div class="field">
+            <label>Note</label>
+            <input type="text" name="note" value="{{ form_data.get('note','') }}">
+          </div>
+          <div class="field">
+            <label>Incidents</label>
+            <input type="text" name="incidents" value="{{ form_data.get('incidents','') }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Section -->
+      <div class="card">
+        <div class="card-title">Info Block</div>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Language</label>
+            <input type="text" name="language" value="{{ form_data.get('language','en-SG') }}" placeholder="en-SG">
+          </div>
+          <div class="field">
+            <label>Category <span class="req">*</span></label>
+            <select name="category">
+              {% for c in categories %}
+              <option value="{{ c.value }}" {% if form_data.get('category','Met') == c.value %}selected{% endif %}>{{ c.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Event <span class="req">*</span></label>
+            <input type="text" name="event" value="{{ form_data.get('event','') }}" placeholder="Severe Thunderstorm Warning">
+          </div>
+          <div class="field">
+            <label>Urgency <span class="req">*</span></label>
+            <select name="urgency">
+              {% for u in urgencies %}
+              <option value="{{ u.value }}" {% if form_data.get('urgency','Unknown') == u.value %}selected{% endif %}>{{ u.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Severity <span class="req">*</span></label>
+            <select name="severity">
+              {% for sv in severities %}
+              <option value="{{ sv.value }}" {% if form_data.get('severity','Unknown') == sv.value %}selected{% endif %}>{{ sv.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Certainty <span class="req">*</span></label>
+            <select name="certainty">
+              {% for ce in certainties %}
+              <option value="{{ ce.value }}" {% if form_data.get('certainty','Unknown') == ce.value %}selected{% endif %}>{{ ce.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Response Type</label>
+            <select name="response_type">
+              <option value="">— None —</option>
+              {% for rt in response_types %}
+              <option value="{{ rt.value }}" {% if form_data.get('response_type','') == rt.value %}selected{% endif %}>{{ rt.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Sender Name</label>
+            <input type="text" name="sender_name" value="{{ form_data.get('sender_name','') }}">
+          </div>
+          <div class="field">
+            <label>Effective</label>
+            <input type="datetime-local" name="effective" value="{{ form_data.get('effective','') }}">
+          </div>
+          <div class="field">
+            <label>Onset</label>
+            <input type="datetime-local" name="onset" value="{{ form_data.get('onset','') }}">
+          </div>
+          <div class="field">
+            <label>Expires <span class="req">*</span></label>
+            <input type="datetime-local" name="expires" value="{{ form_data.get('expires','') }}" required>
+          </div>
+        </div>
+
+        <div class="form-grid full" style="margin-top:1rem">
+          <div class="field">
+            <label>Headline <span class="req">*</span></label>
+            <input type="text" name="headline" value="{{ form_data.get('headline','') }}" placeholder="Short alert headline">
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <textarea name="description">{{ form_data.get('description','') }}</textarea>
+          </div>
+          <div class="field">
+            <label>Instruction</label>
+            <textarea name="instruction">{{ form_data.get('instruction','') }}</textarea>
+          </div>
+        </div>
+
+        <!-- eventCode and parameter -->
+        <div class="form-grid" style="margin-top:1rem">
+          <div class="field">
+            <label>Event Code — Name</label>
+            <input type="text" name="event_code_name" value="{{ form_data.get('event_code_name','') }}" placeholder="SAME">
+          </div>
+          <div class="field">
+            <label>Event Code — Value</label>
+            <input type="text" name="event_code_value" value="{{ form_data.get('event_code_value','') }}" placeholder="SVR">
+          </div>
+          <div class="field">
+            <label>Parameter — Name</label>
+            <input type="text" name="parameter_name" value="{{ form_data.get('parameter_name','') }}" placeholder="layer:SAMESTAT">
+          </div>
+          <div class="field">
+            <label>Parameter — Value</label>
+            <input type="text" name="parameter_value" value="{{ form_data.get('parameter_value','') }}" placeholder="057001">
+          </div>
+        </div>
+      </div>
+
+      <!-- Area Section -->
+      <div class="card">
+        <div class="card-title">Area (Optional)</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Area Description</label>
+            <input type="text" name="area_desc" value="{{ form_data.get('area_desc','') }}" placeholder="Singapore">
+          </div>
+          <div class="field">
+            <label>Polygon <span style="color:#64748b;font-weight:400">(lat,lon pairs, space-separated, closed ring)</span></label>
+            <input type="text" name="polygon" value="{{ form_data.get('polygon','') }}" placeholder="1.0,103.0 2.0,104.0 1.0,103.0">
+          </div>
+          <div class="field">
+            <label>Circle <span style="color:#64748b;font-weight:400">(lat,lon radius_km)</span></label>
+            <input type="text" name="circle" value="{{ form_data.get('circle','') }}" placeholder="1.3521,103.8198 30.0">
+          </div>
+          <div class="field">
+            <label>Geocode — Name</label>
+            <input type="text" name="geocode_name" value="{{ form_data.get('geocode_name','') }}" placeholder="ISO3166-2">
+          </div>
+          <div class="field">
+            <label>Geocode — Value</label>
+            <input type="text" name="geocode_value" value="{{ form_data.get('geocode_value','') }}" placeholder="SG">
+          </div>
+          <div class="field">
+            <label>Altitude (m)</label>
+            <input type="number" name="altitude" value="{{ form_data.get('altitude','') }}" step="any">
+          </div>
+          <div class="field">
+            <label>Ceiling (m)</label>
+            <input type="number" name="ceiling" value="{{ form_data.get('ceiling','') }}" step="any">
+          </div>
+        </div>
+      </div>
+
+      <!-- Resource Section -->
+      <div class="card">
+        <div class="card-title">Resource (Optional)</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Resource Description</label>
+            <input type="text" name="resource_desc" value="{{ form_data.get('resource_desc','') }}" placeholder="Radar image">
+          </div>
+          <div class="field">
+            <label>MIME Type</label>
+            <input type="text" name="mime_type" value="{{ form_data.get('mime_type','') }}" placeholder="image/png">
+          </div>
+          <div class="field">
+            <label>URI</label>
+            <input type="text" name="resource_uri" value="{{ form_data.get('resource_uri','') }}" placeholder="https://...">
+          </div>
+          <div class="field">
+            <label>Size (bytes)</label>
+            <input type="number" name="resource_size" value="{{ form_data.get('resource_size','') }}">
+          </div>
+          <div class="field">
+            <label>Digest (SHA-1)</label>
+            <input type="text" name="resource_digest" value="{{ form_data.get('resource_digest','') }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">⚡ Build CAP Message</button>
+        <button type="reset" class="btn btn-secondary">↺ Reset Form</button>
+      </div>
+    </form>
+
+    <!-- ── Validation Summary ── -->
+    {% if validation_summary %}
+    <div class="card" style="margin-top:2rem">
+      <div class="card-title">Validation Summary</div>
+      <div class="val-summary">
+        {% for check in validation_summary %}
+        <div class="val-check {% if check.passed %}pass{% else %}fail{% endif %}">
+          <span class="icon">{% if check.passed %}✓{% else %}✗{% endif %}</span>
+          <div>
+            <div class="label">{{ check.label }}</div>
+            {% if check.detail %}<div class="detail">{{ check.detail }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── XML Output ── -->
+    {% if xml_output %}
+    <div class="card" style="margin-top:1.5rem">
+      <div class="xml-header">
+        <div class="card-title" style="margin-bottom:0">Generated CAP v1.2 XML</div>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-copy" onclick="copyXML()">⎘ Copy XML</button>
+          <a class="ext-link" href="https://cap-validator.appspot.com" target="_blank" rel="noopener">
+            ↗ Validate at cap-validator.appspot.com
+          </a>
+          <span style="font-size:0.72rem;color:#475569">
+            Note: cap-validator.appspot.com is an external service maintained by OASIS.
+          </span>
+        </div>
+      </div>
+      <pre class="xml-pre" id="xml-output">{{ xml_output }}</pre>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PARSE TAB
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-parse" class="tab-panel {% if mode == 'parse' %}active{% endif %}">
+    <form method="POST" action="/parse">
+      <div class="card">
+        <div class="card-title">Paste CAP v1.2 XML</div>
+        <div class="field">
+          <textarea name="raw_xml" rows="14" placeholder="<?xml version='1.0' encoding='UTF-8'?>&#10;<alert xmlns=&quot;urn:oasis:names:tc:emergency:cap:1.2&quot;>&#10;  ...&#10;</alert>">{{ raw_xml if raw_xml is defined else '' }}</textarea>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">🔍 Parse &amp; Interpret</button>
+        </div>
+      </div>
+    </form>
+
+    {% if parse_result %}
+    {% set msg = parse_result %}
+    <div class="card">
+      <div class="card-title">Alert — Message Level</div>
+      <div class="parse-section">
+        <table class="kv-table">
+          <tr><td>Identifier</td><td><code>{{ msg.identifier }}</code></td></tr>
+          <tr><td>Sender</td><td>{{ msg.sender }}</td></tr>
+          <tr><td>Sent</td><td>{{ msg.sent }}</td></tr>
+          <tr><td>Status</td><td>
+            <span class="badge badge-{{ msg.status.value | lower }}">{{ msg.status.value }}</span>
+          </td></tr>
+          <tr><td>Message Type</td><td>{{ msg.msg_type.value }}</td></tr>
+          <tr><td>Scope</td><td>{{ msg.scope.value }}</td></tr>
+          {% if msg.restriction %}<tr><td>Restriction</td><td>{{ msg.restriction }}</td></tr>{% endif %}
+          {% if msg.addresses %}<tr><td>Addresses</td><td>{{ msg.addresses }}</td></tr>{% endif %}
+          {% if msg.note %}<tr><td>Note</td><td>{{ msg.note }}</td></tr>{% endif %}
+          {% if msg.references %}<tr><td>References</td><td><code>{{ msg.references }}</code></td></tr>{% endif %}
+          {% if msg.incidents %}<tr><td>Incidents</td><td>{{ msg.incidents }}</td></tr>{% endif %}
+        </table>
+      </div>
+    </div>
+
+    {% for info in msg.info_blocks %}
+    <div class="card">
+      <div class="card-title">Info Block {{ loop.index }} of {{ msg.info_blocks | length }}</div>
+      <div class="parse-section">
+        <table class="kv-table">
+          <tr><td>Language</td><td>{{ info.language }}</td></tr>
+          <tr><td>Category</td><td>{{ info.category.value }}</td></tr>
+          <tr><td>Event</td><td>{{ info.event }}</td></tr>
+          <tr><td>Urgency</td><td>{{ info.urgency.value }}</td></tr>
+          <tr><td>Severity</td><td>
+            <span class="badge badge-{{ info.severity.value | lower }}">{{ info.severity.value }}</span>
+          </td></tr>
+          <tr><td>Certainty</td><td>{{ info.certainty.value }}</td></tr>
+          {% if info.response_type %}<tr><td>Response Type</td><td>{{ info.response_type.value }}</td></tr>{% endif %}
+          {% if info.effective %}<tr><td>Effective</td><td>{{ info.effective }}</td></tr>{% endif %}
+          {% if info.onset %}<tr><td>Onset</td><td>{{ info.onset }}</td></tr>{% endif %}
+          <tr><td>Expires</td><td>{{ info.expires }}</td></tr>
+          {% if info.sender_name %}<tr><td>Sender Name</td><td>{{ info.sender_name }}</td></tr>{% endif %}
+          <tr><td>Headline</td><td><strong>{{ info.headline }}</strong></td></tr>
+          {% if info.description %}<tr><td>Description</td><td>{{ info.description }}</td></tr>{% endif %}
+          {% if info.instruction %}<tr><td>Instruction</td><td>{{ info.instruction }}</td></tr>{% endif %}
+          {% if info.event_codes %}
+          <tr><td>Event Codes</td><td>
+            {% for k, v in info.event_codes.items() %}<code>{{ k }}={{ v }}</code> {% endfor %}
+          </td></tr>
+          {% endif %}
+          {% if info.parameters %}
+          <tr><td>Parameters</td><td>
+            {% for k, v in info.parameters.items() %}<code>{{ k }}={{ v }}</code> {% endfor %}
+          </td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      {% for area in info.areas %}
+      <div class="parse-section">
+        <h3>Area {{ loop.index }}</h3>
+        <table class="kv-table">
+          <tr><td>Description</td><td>{{ area.area_desc }}</td></tr>
+          {% if area.polygon %}<tr><td>Polygon</td><td><code style="word-break:break-all">{{ area.polygon }}</code></td></tr>{% endif %}
+          {% if area.circle %}<tr><td>Circle</td><td><code>{{ area.circle }}</code></td></tr>{% endif %}
+          {% if area.geocode %}
+          <tr><td>Geocode</td><td>
+            {% for k, v in area.geocode.items() %}<code>{{ k }}={{ v }}</code> {% endfor %}
+          </td></tr>
+          {% endif %}
+          {% if area.altitude is not none %}<tr><td>Altitude</td><td>{{ area.altitude }} m</td></tr>{% endif %}
+          {% if area.ceiling is not none %}<tr><td>Ceiling</td><td>{{ area.ceiling }} m</td></tr>{% endif %}
+        </table>
+      </div>
+      {% endfor %}
+
+      {% for res in info.resources %}
+      <div class="parse-section">
+        <h3>Resource {{ loop.index }}</h3>
+        <table class="kv-table">
+          <tr><td>Description</td><td>{{ res.resource_desc }}</td></tr>
+          <tr><td>MIME Type</td><td>{{ res.mime_type }}</td></tr>
+          {% if res.uri %}<tr><td>URI</td><td><a href="{{ res.uri }}" target="_blank" rel="noopener" style="color:#818cf8">{{ res.uri }}</a></td></tr>{% endif %}
+          {% if res.size is not none %}<tr><td>Size</td><td>{{ res.size }} bytes</td></tr>{% endif %}
+          {% if res.digest %}<tr><td>Digest</td><td><code>{{ res.digest }}</code></td></tr>{% endif %}
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelectorAll('.tab-btn')[tab === 'compose' ? 0 : 1].classList.add('active');
+  }
+
+  // ── Conditional field visibility ──────────────────────────────────────────
+  function toggleConditional() {
+    const scope   = document.getElementById('scope_sel').value;
+    const msgType = document.getElementById('msg_type_sel').value;
+
+    const restriction = document.getElementById('field_restriction');
+    const addresses   = document.getElementById('field_addresses');
+    const references  = document.getElementById('field_references');
+
+    restriction.classList.toggle('visible', scope === 'Restricted');
+    addresses.classList.toggle('visible',   scope === 'Private');
+    references.classList.toggle('visible',  ['Update','Cancel','Ack'].includes(msgType));
+  }
+
+  // ── Copy XML ──────────────────────────────────────────────────────────────
+  function copyXML() {
+    const pre = document.getElementById('xml-output');
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    });
+  }
+
+  // Run on load to restore conditional state from form_data
+  toggleConditional();
+</script>
+
+</body>
+</html>
